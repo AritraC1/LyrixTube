@@ -1,4 +1,44 @@
 services:
+  # MongoDB Database Service
+  mongo:
+    # Official MongoDB image
+    image: mongo:7
+
+    # Custom container name
+    container_name: lyrix-mongo
+
+    # Expose Port
+    ports:
+      - "27017:27017"
+
+    # Automatically restart unless manually stopped
+    restart: unless-stopped
+
+    # Load MongoDB environment variables
+    env_file:
+      - ./server/.env
+
+    # Persist MongoDB data using named volume
+    volumes:
+      - mongo-data:/data/db
+
+     # Health check to ensure MongoDB is ready
+    healthcheck:
+      # Ping MongoDB server
+      test: [
+        "CMD-SHELL",
+        "mongosh --username $$MONGO_INITDB_ROOT_USERNAME --password $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --quiet --eval \"db.adminCommand('ping')\""
+      ]
+      interval: 30s               # Run health check every 30 seconds
+      timeout: 10s                # Health check timeout duration
+      retries: 5                  # Mark container unhealthy after 5 failures
+      start_period: 20s           # Wait before starting health checks
+    
+    # Connect to custom bridge network
+    networks:
+      - lyrix-network
+
+  # Backend API Service
   api:
     # Build the Docker image from the ./server directory
     build:
@@ -18,6 +58,11 @@ services:
     # Load environment variables from .env file
     env_file:
       - ./server/.env
+
+    # Wait for MongoDB to become healthy before starting API
+    depends_on:
+      mongo:
+        condition: service_healthy
     
     # Health check to verify API is responding
     healthcheck:
@@ -32,7 +77,13 @@ services:
     networks:
       - lyrix-network
 
+# Named Volumes
+volumes:
+  # Persistent storage for MongoDB data
+  mongo-data:
+
 # Define custom Docker network
 networks:
   lyrix-network:
-    driver: bridge               # Default bridge network driver
+    # Default bridge network driver
+    driver: bridge

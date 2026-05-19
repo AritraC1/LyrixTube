@@ -1,7 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const allRoutes = require("./routes/allRoutes");
+
+const allRoutes = require("./routes/all.routes");
+const healthRoutes = require("./routes/health.routes");
+const connectToMongoDB = require("./config/db");
 
 dotenv.config();
 
@@ -14,13 +17,16 @@ app.use(cors());
 app.use(express.json());
 
 // API Endpoints
-app.get("/health", (req, res) => {
-  return res.status(200).json({ status: "ok" });
-});
-
+app.use("/", healthRoutes);
 app.use("/api", allRoutes);
 
 // Start Server
-app.listen(PORT_NUMBER, () => {
-  console.log(`Server is running on ${PORT_NUMBER}`);
-});
+const startServer = async () => {
+  await connectToMongoDB(); // wait for DB to start first
+
+  app.listen(PORT_NUMBER, () => {
+    console.log(`Server is running on ${PORT_NUMBER}`);
+  });
+};
+
+startServer();

@@ -1,4 +1,4 @@
-const { getGenerateLyrics } = require("../services/lyrics");
+const { getGenerateLyrics } = require("../services/lyrics.service");
 
 const generateLyrics = async (req, res) => {
   try {

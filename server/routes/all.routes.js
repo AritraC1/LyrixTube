@@ -1,6 +1,8 @@
 const express = require("express");
+
+const { generateLyrics } = require("../controllers/lyrics.controller");
+
 const router = express.Router();
-const { generateLyrics } = require("../controllers/lyrics");
 
 router.post("/generate-lyrics", generateLyrics);
 
