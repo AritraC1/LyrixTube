@@ -11,12 +11,16 @@ const PORT_NUMBER = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors());
-app.use(express.json()); 
+app.use(express.json());
 
 // API Endpoints
+app.get("/health", (req, res) => {
+  return res.status(200).json({ status: "ok" });
+});
+
 app.use("/api", allRoutes);
 
 // Start Server
 app.listen(PORT_NUMBER, () => {
-    console.log(`Server is running on ${PORT_NUMBER}`);
+  console.log(`Server is running on ${PORT_NUMBER}`);
 });

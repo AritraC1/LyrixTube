@@ -11,5 +11,5 @@ const formatLyrics = (rawLyrics) => {
 };
 
 module.exports = {
-    formatLyrics
-}
+  formatLyrics,
+};

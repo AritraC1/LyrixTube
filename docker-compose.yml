@@ -1,0 +1,38 @@
+services:
+  api:
+    # Build the Docker image from the ./server directory
+    build:
+      context: ./server            # Path to backend source code
+      dockerfile: Dockerfile       # Dockerfile used for building the image
+    
+    # Custom container name
+    container_name: lyrix-server
+    
+    # Expose container port 3000 to host port 3000
+    ports:
+      - "3001:3000"
+    
+    # Automatically restart container unless manually stopped
+    restart: unless-stopped
+    
+    # Load environment variables from .env file
+    env_file:
+      - ./server/.env
+    
+    # Health check to verify API is responding
+    healthcheck:
+      # Send HTTP request to /health endpoint
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s               # Run health check every 30 seconds
+      timeout: 10s                # Health check timeout duration
+      retries: 3                  # Mark container unhealthy after 3 failures
+      start_period: 10s           # Wait 10 seconds before starting health checks
+    
+    # Connect container to custom bridge network
+    networks:
+      - lyrix-network
+
+# Define custom Docker network
+networks:
+  lyrix-network:
+    driver: bridge               # Default bridge network driver
