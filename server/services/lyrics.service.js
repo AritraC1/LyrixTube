@@ -6,6 +6,16 @@ const { formatLyrics } = require("../utils/formatLyrics");
 
 const Client = new Genius.Client(process.env.GENIUS_TOKEN);
 
+const isJunkLyrics = (raw) => {
+  if (!raw || raw.length < 100) return true;
+  if (raw.length > 50000) return true;
+  if (raw.includes("Album Release Calendar")) return true;
+  if (raw.includes("Genius Chart")) return true;
+  const afterHeader = raw.replace(/^\d+\s*Contributors.*?Lyrics/s, "").trim();
+  if (afterHeader.length < 100) return true;
+  return false;
+};
+
 const getGenerateLyrics = async (link) => {
   // Validate YouTube URL
   const ytType = play.yt_validate(link);
@@ -18,11 +28,14 @@ const getGenerateLyrics = async (link) => {
   const existingLyrics = await Lyrics.findOneAndUpdate(
     { yt_url: link },
     { $inc: { search_count: 1 } },
-    { new: true },
+    { returnDocument: "after" },
   );
 
   // Return cached lyrics if found
   if (existingLyrics) {
+    console.log(
+      `[Cache] HIT — ${existingLyrics.song_name} by ${existingLyrics.artist}`,
+    );
     return {
       song: existingLyrics.song_name,
       artist: existingLyrics.artist,
@@ -39,12 +52,12 @@ const getGenerateLyrics = async (link) => {
 
   // Clean title
   const cleanedTitle = rawTitle
-    .replace(/\(.*?\)|\[.*?\]/g, "") // remove brackets
+    .replace(/\(.*?\)|\[.*?\]/g, "")
     .replace(
       /official music video|official video|official audio|lyric video|lyrics?/gi,
       "",
     )
-    .replace(/ft\.?|feat\.?.*/gi, "") // remove featured artists
+    .replace(/ft\.?|feat\.?.*/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -71,7 +84,7 @@ const getGenerateLyrics = async (link) => {
   }
 
   // Filter best result
-  let geniusSong =
+  const geniusSong =
     searches.find((s) => {
       const title = s.title.toLowerCase();
       const fullTitle = s.fullTitle.toLowerCase();
@@ -95,12 +108,24 @@ const getGenerateLyrics = async (link) => {
     throw new Error("Lyrics not available");
   }
 
+  // Validate lyrics content
+  if (isJunkLyrics(rawLyrics)) {
+    console.warn(
+      `[Genius] Junk lyrics detected for "${geniusSong.fullTitle}" — skipping save`,
+    );
+    throw new Error(
+      "Could not retrieve valid lyrics — Genius returned a non-lyrics page",
+    );
+  }
+
   // Format lyrics
   const lyrics = formatLyrics(rawLyrics);
 
   if (!lyrics) {
     throw new Error("Failed to format lyrics");
   }
+
+  console.log(`[Cache] MISS — saving "${song}" by "${artist}" to MongoDB`);
 
   // Save to DB
   await Lyrics.create({
